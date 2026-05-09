@@ -1,0 +1,512 @@
+{
+  "info": {
+    "name": "Fitness App API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.8.107:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/send-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "send-otp"]
+            },
+            "description": "Sends a 6-digit OTP to the given email. OTP expires in 5 minutes."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"OTP sent successfully\"\n}"
+            },
+            {
+              "name": "Invalid email",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": [\"email must be an email\"],\n  \"timestamp\": \"2026-04-18T00:00:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Token saved:', res.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "description": "Verifies the OTP. On success, returns a JWT token and saves it to the collection variable {{token}} automatically."
+          },
+          "response": [
+            {
+              "name": "Success (new user)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"isProfileComplete\": false\n}"
+            },
+            {
+              "name": "Success (returning user)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"isProfileComplete\": true\n}"
+            },
+            {
+              "name": "Invalid OTP",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Invalid OTP code.\",\n  \"timestamp\": \"2026-04-18T00:00:00.000Z\"\n}"
+            },
+            {
+              "name": "Expired OTP",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"OTP has expired. Please request a new one.\",\n  \"timestamp\": \"2026-04-18T00:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile (Info 1 + Info 2)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 27,\n  \"weight\": 82,\n  \"height\": 178,\n  \"gender\": \"male\",\n  \"activityLevel\": \"moderately_active\",\n  \"goal\": \"lose\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Saves onboarding profile data. Requires Bearer token.\n\nValid values:\n- gender: male | female\n- activityLevel: sedentary | lightly_active | moderately_active | very_active | extra_active\n- goal: lose | maintain | gain"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"_id\": \"664a1234abcd5678ef901234\",\n  \"email\": \"test@example.com\",\n  \"isVerified\": true,\n  \"isProfileComplete\": true,\n  \"age\": 27,\n  \"weight\": 82,\n  \"height\": 178,\n  \"gender\": \"male\",\n  \"activityLevel\": \"moderately_active\",\n  \"goal\": \"lose\"\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Unauthorized\"\n}"
+            },
+            {
+              "name": "Validation error",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": [\"age must not be greater than 120\", \"gender must be one of the following values: male, female\"],\n  \"timestamp\": \"2026-04-18T00:00:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Me (with health metrics)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Returns the logged-in user's profile and computed health metrics (BMI, BMR, TDEE, daily calorie target)."
+          },
+          "response": [
+            {
+              "name": "Success (profile complete)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"user\": {\n    \"_id\": \"664a1234abcd5678ef901234\",\n    \"email\": \"test@example.com\",\n    \"isVerified\": true,\n    \"isProfileComplete\": true,\n    \"age\": 27,\n    \"weight\": 82,\n    \"height\": 178,\n    \"gender\": \"male\",\n    \"activityLevel\": \"moderately_active\",\n    \"goal\": \"lose\"\n  },\n  \"metrics\": {\n    \"bmi\": 25.9,\n    \"bmr\": 1867,\n    \"tdee\": 2894,\n    \"dailyCalories\": 2394\n  }\n}"
+            },
+            {
+              "name": "Success (profile incomplete)",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"user\": {\n    \"_id\": \"664a1234abcd5678ef901234\",\n    \"email\": \"test@example.com\",\n    \"isVerified\": true,\n    \"isProfileComplete\": false\n  },\n  \"metrics\": null\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Meal Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isKeto\": false,\n  \"isVegetarian\": false,\n  \"isVegan\": false,\n  \"allergies\": [],\n  \"cuisinePreferences\": [\"Mediterranean\", \"Asian\"],\n  \"likedIngredients\": [\"chicken\", \"rice\"],\n  \"dislikedIngredients\": [\"mushrooms\"],\n  \"mealsPerDay\": 3,\n  \"spiceTolerance\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/meal-preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "meal-preferences"]
+            },
+            "description": "Saves the user's meal preferences used by KNN/CSP meal planning.\n\nValid values:\n- mealsPerDay: 2 | 3\n- spiceTolerance: low | medium | high"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"_id\": \"664a1234abcd5678ef901234\",\n  \"email\": \"test@example.com\",\n  \"isKeto\": false,\n  \"isVegetarian\": false,\n  \"isVegan\": false,\n  \"mealsPerDay\": 3,\n  \"spiceTolerance\": \"medium\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ratings",
+      "item": [
+        {
+          "name": "Batch Rate Meals",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ratings\": [\n    { \"mealId\": \"m_001\", \"rating\": 5 },\n    { \"mealId\": \"m_002\", \"rating\": 3 },\n    { \"mealId\": \"m_003\", \"rating\": 4 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ratings/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["ratings", "batch"]
+            },
+            "description": "Saves multiple meal ratings at once (1–5 stars). Also sets mealPlanStatus to 'ratings_done'."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"message\": \"Ratings saved\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Meal Plan",
+      "item": [
+        {
+          "name": "Get Rating Candidates",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal-plan/candidates",
+              "host": ["{{baseUrl}}"],
+              "path": ["meal-plan", "candidates"]
+            },
+            "description": "Returns a set of meals for the user to rate (filtered by their preferences and excluding already-rated meals). Used before generating the meal plan."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"_id\": \"m_001\",\n    \"name\": \"Grilled Chicken Salad\",\n    \"calories\": 420,\n    \"protein\": 38,\n    \"carbs\": 15,\n    \"fat\": 22\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Generate Meal Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal-plan/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["meal-plan", "generate"]
+            },
+            "description": "Generates a personalized 7-day meal plan using KNN (preference matching) + CSP (constraint satisfaction). Also sets mealPlanStatus to 'plan_ready'. Returns the populated plan."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"userId\": \"664a1234abcd5678ef901234\",\n  \"weekPlan\": [\n    {\n      \"day\": 1,\n      \"breakfast\": { \"_id\": \"m_005\", \"name\": \"Oatmeal with Berries\", \"calories\": 310 },\n      \"lunch\": { \"_id\": \"m_012\", \"name\": \"Grilled Chicken Wrap\", \"calories\": 480 },\n      \"dinner\": { \"_id\": \"m_027\", \"name\": \"Salmon with Quinoa\", \"calories\": 520 }\n    }\n  ],\n  \"avgCalories\": 1800,\n  \"avgProtein\": 120,\n  \"avgCarbs\": 180,\n  \"avgFat\": 60\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current Meal Plan",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal-plan/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["meal-plan", "current"]
+            },
+            "description": "Returns the user's most recently generated meal plan with fully populated meal objects."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"userId\": \"664a1234abcd5678ef901234\",\n  \"weekPlan\": [\n    {\n      \"day\": 1,\n      \"breakfast\": { \"_id\": \"m_005\", \"name\": \"Oatmeal with Berries\", \"calories\": 310 },\n      \"lunch\": { \"_id\": \"m_012\", \"name\": \"Grilled Chicken Wrap\", \"calories\": 480 },\n      \"dinner\": { \"_id\": \"m_027\", \"name\": \"Salmon with Quinoa\", \"calories\": 520 }\n    }\n  ],\n  \"avgCalories\": 1800,\n  \"avgProtein\": 120,\n  \"avgCarbs\": 180,\n  \"avgFat\": 60\n}"
+            },
+            {
+              "name": "No plan yet",
+              "status": "OK",
+              "code": 200,
+              "body": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Activities",
+      "item": [
+        {
+          "name": "Get Activity Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activities/types",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "types"]
+            },
+            "description": "Returns all available activity types grouped by category (Running, Walking, Cycling, Sports, Swimming, Gym, Other). Use for populating the activity type picker."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"Running\": [\"running\", \"jogging\", \"sprinting\"],\n  \"Walking\": [\"walking\", \"hiking\"],\n  \"Cycling\": [\"cycling\", \"mountain_biking\"],\n  \"Sports\": [\"basketball\", \"football\", \"tennis\", \"volleyball\", \"badminton\"],\n  \"Swimming\": [\"swimming\", \"water_aerobics\"],\n  \"Gym\": [\"weight_training\", \"yoga\", \"pilates\", \"cardio_machine\", \"aerobics\", \"crossfit\"],\n  \"Other\": [\"dancing\", \"martial_arts\", \"jump_rope\", \"rowing\"]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Activities",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activities?range=week",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "week",
+                  "description": "today | week | month | year (default: today)"
+                }
+              ]
+            },
+            "description": "Returns the user's activity logs for the given time range, sorted by loggedAt descending."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"_id\": \"664a9999abcd0001ef000001\",\n    \"userId\": \"664a1234abcd5678ef901234\",\n    \"activityType\": \"running\",\n    \"activityLabel\": \"Running\",\n    \"durationMinutes\": 30,\n    \"intensity\": \"moderate\",\n    \"caloriesBurned\": 285,\n    \"loggedAt\": \"2026-04-25T07:30:00.000Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Activity Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activities/stats?range=week",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "stats"],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "week",
+                  "description": "today | week | month | year (default: today)"
+                }
+              ]
+            },
+            "description": "Returns aggregated stats for the given time range: total calories burned, total minutes, session count, and most frequent activity type."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"totalCalories\": 1240,\n  \"totalMinutes\": 135,\n  \"sessionCount\": 4,\n  \"mostFrequent\": \"running\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Log Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityType\": \"running\",\n  \"durationMinutes\": 30,\n  \"loggedAt\": \"2026-04-25T07:30:00.000Z\",\n  \"notes\": \"Morning run in the park\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"]
+            },
+            "description": "Logs a new activity. Calories burned are auto-calculated using MET values based on the activity type, duration, and user's weight."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"_id\": \"664a9999abcd0001ef000001\",\n  \"userId\": \"664a1234abcd5678ef901234\",\n  \"activityType\": \"running\",\n  \"activityLabel\": \"Running\",\n  \"durationMinutes\": 30,\n  \"intensity\": \"moderate\",\n  \"caloriesBurned\": 285,\n  \"notes\": \"Morning run in the park\",\n  \"loggedAt\": \"2026-04-25T07:30:00.000Z\"\n}"
+            },
+            {
+              "name": "Unknown activity type",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"Unknown activity type: unknown_type\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Activity",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "664a9999abcd0001ef000001",
+                  "description": "MongoDB ObjectId of the activity to delete"
+                }
+              ]
+            },
+            "description": "Deletes an activity log entry. Only the owner can delete their own entries."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"deleted\": true\n}"
+            },
+            {
+              "name": "Not found / not owner",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Activity not found\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
